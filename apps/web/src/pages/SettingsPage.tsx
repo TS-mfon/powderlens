@@ -1,3 +1,5 @@
+import { appConfig } from "../config";
+
 export function SettingsPage() {
   return (
     <main className="panel">
@@ -7,14 +9,20 @@ export function SettingsPage() {
         <div className="row">
           <div>Frontend host</div>
           <div className="muted">Vercel</div>
-          <div>API host</div>
-          <div className="muted">VPS</div>
+          <div>Execution chain</div>
+          <div className="muted">{appConfig.chainName}</div>
         </div>
         <div className="row">
-          <div>Database</div>
-          <div className="muted">PostgreSQL on VPS</div>
-          <div>Queue/cache</div>
-          <div className="muted">Redis on VPS</div>
+          <div>Signal registry</div>
+          <div className="muted">{appConfig.contracts.signalRegistry}</div>
+          <div>Thesis registry</div>
+          <div className="muted">{appConfig.contracts.thesisRegistry}</div>
+        </div>
+        <div className="row">
+          <div>Admin controller</div>
+          <div className="muted">{appConfig.contracts.adminController}</div>
+          <div>RPC</div>
+          <div className="muted">{appConfig.rpcUrl}</div>
         </div>
       </div>
     </main>

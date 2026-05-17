@@ -9,13 +9,14 @@
   "dependencies": {
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-router-dom": "^7.6.1"
+    "react-router-dom": "^7.6.1",
+    "viem": "^2.49.3"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.5.2",
     "@types/node": "^22.15.29",
     "@types/react": "^19.1.5",
     "@types/react-dom": "^19.1.5",
+    "@vitejs/plugin-react": "^4.5.2",
     "typescript": "^5.8.3",
     "vite": "^6.3.5"
   }
