@@ -3,6 +3,7 @@ import {
   createWalletClient,
   custom,
   defineChain,
+  getAddress,
   http,
   keccak256,
   parseAbi,
@@ -41,10 +42,17 @@ const mantleChain = defineChain({
   }
 });
 
+type ProviderRequest = {
+  method: string;
+  params?: unknown[] | object[];
+};
+
 declare global {
   interface Window {
     ethereum?: {
-      request: (args: { method: string; params?: unknown[] | object[] }) => Promise<unknown>;
+      request: (args: ProviderRequest) => Promise<unknown>;
+      on?: (event: string, listener: (...args: unknown[]) => void) => void;
+      removeListener?: (event: string, listener: (...args: unknown[]) => void) => void;
     };
   }
 }
@@ -55,20 +63,26 @@ const toSignalKey = (signal: Signal) =>
 const toEvidenceHash = (signal: Signal) =>
   keccak256(stringToBytes(`${signal.id}:${signal.headline}:${signal.summary}`));
 
-const ensureWallet = async () => {
+const ensureProvider = () => {
   if (!window.ethereum) {
     throw new Error("No injected wallet found. Open the app with MetaMask or Rabby.");
   }
 
+  return window.ethereum;
+};
+
+export const switchToMantle = async () => {
+  const provider = ensureProvider();
+
   try {
-    await window.ethereum.request({
+    await provider.request({
       method: "wallet_switchEthereumChain",
       params: [{ chainId: appConfig.chainHex }]
     });
   } catch (error) {
     const walletError = error as { code?: number };
     if (walletError.code === 4902) {
-      await window.ethereum.request({
+      await provider.request({
         method: "wallet_addEthereumChain",
         params: [
           {
@@ -84,14 +98,40 @@ const ensureWallet = async () => {
           }
         ]
       });
-    } else if (walletError.code !== -32002) {
+    } else {
       throw error;
     }
   }
+};
+
+export const connectWallet = async () => {
+  const provider = ensureProvider();
+  await switchToMantle();
+  const accounts = (await provider.request({
+    method: "eth_requestAccounts"
+  })) as string[];
+
+  return getAddress(accounts[0]);
+};
+
+export const getConnectedWallet = async () => {
+  const provider = ensureProvider();
+  const accounts = (await provider.request({ method: "eth_accounts" })) as string[];
+
+  if (!accounts.length) {
+    return null;
+  }
+
+  return getAddress(accounts[0]);
+};
+
+const getClients = async () => {
+  const provider = ensureProvider();
+  await switchToMantle();
 
   const walletClient = createWalletClient({
     chain: mantleChain,
-    transport: custom(window.ethereum)
+    transport: custom(provider)
   });
 
   const [account] = await walletClient.requestAddresses();
@@ -105,17 +145,12 @@ const ensureWallet = async () => {
 };
 
 export const recordSignalOnChain = async (signal: Signal) => {
-  const { walletClient, publicClient, account } = await ensureWallet();
+  const { walletClient, publicClient, account } = await getClients();
   const hash = await walletClient.writeContract({
     address: appConfig.contracts.signalRegistry as `0x${string}`,
     abi: signalRegistryAbi,
     functionName: "recordSignal",
-    args: [
-      toSignalKey(signal),
-      toEvidenceHash(signal),
-      signal.confidence,
-      signal.headline
-    ],
+    args: [toSignalKey(signal), toEvidenceHash(signal), signal.confidence, signal.headline],
     account
   });
 
@@ -128,7 +163,7 @@ export const recordSignalOnChain = async (signal: Signal) => {
 };
 
 export const createThesisOnChain = async (signal: Signal, thesis: string) => {
-  const { walletClient, publicClient, account } = await ensureWallet();
+  const { walletClient, publicClient, account } = await getClients();
   const hash = await walletClient.writeContract({
     address: appConfig.contracts.thesisRegistry as `0x${string}`,
     abi: thesisRegistryAbi,
