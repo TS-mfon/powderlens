@@ -1,10 +1,10 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
-import { getJson } from "../api";
+import { getJson, postJson } from "../api";
 import { appConfig } from "../config";
 import { useApi } from "../hooks/useApi";
 import { createThesisOnChain, recordSignalOnChain } from "../onchain";
-import type { Signal, StarterCard, ToastItem, TxState } from "../types";
+import type { AlertRule, Signal, StarterCard, ToastItem, TxState } from "../types";
 
 type DashboardPageProps = {
   backendAvailable: boolean;
@@ -22,11 +22,16 @@ export function DashboardPage({
   onToast
 }: DashboardPageProps) {
   const { data, error, isLoading } = useApi(() => getJson<Signal[]>("/signals"));
+  const { data: alertRules, isLoading: alertsLoading } = useApi(() => getJson<AlertRule[]>("/alerts"));
+  const { data: starterWorkflows } = useApi(() => getJson<StarterCard[]>("/starter-workflows"));
   const [selectedSignalId, setSelectedSignalId] = useState("");
   const [thesis, setThesis] = useState("");
+  const [alertChannel, setAlertChannel] = useState("telegram");
+  const [alertCondition, setAlertCondition] = useState("");
   const [txState, setTxState] = useState<TxState>({ status: "idle" });
 
   const signals = useMemo(() => data ?? [], [data]);
+  const starters = useMemo(() => starterWorkflows ?? [], [starterWorkflows]);
   const selectedSignal =
     signals.find((signal) => signal.id === selectedSignalId) ??
     (starterDraft?.signalId
@@ -44,6 +49,12 @@ export function DashboardPage({
       setSelectedSignalId(starterDraft.signalId);
     }
   }, [starterDraft]);
+
+  useEffect(() => {
+    if (selectedSignal) {
+      setAlertCondition(`Notify when ${selectedSignal.headline.toLowerCase()} changes materially.`);
+    }
+  }, [selectedSignal?.id]);
 
   const recordSignal = async (signal: Signal) => {
     setTxState({ status: "pending", message: `Recording ${signal.headline}...` });
@@ -108,6 +119,29 @@ export function DashboardPage({
     }
   };
 
+  const createAlert = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    try {
+      await postJson("/alerts", {
+        channel: alertChannel,
+        condition: alertCondition
+      });
+      onToast({
+        title: "Alert created",
+        body: `${alertChannel} rule saved to the VPS backend.`,
+        tone: "success"
+      });
+      window.location.reload();
+    } catch (alertError) {
+      onToast({
+        title: "Alert creation failed",
+        body: alertError instanceof Error ? alertError.message : "Try again.",
+        tone: "error"
+      });
+    }
+  };
+
   if (isLoading) {
     return <main className="panel">Loading Mantle intelligence...</main>;
   }
@@ -117,7 +151,7 @@ export function DashboardPage({
   }
 
   return (
-    <main className="dashboard">
+    <main className={`dashboard dashboard-${appConfig.slug}`}>
       <section className="panel dashboard-lead">
         <div className="section-heading">
           <div>
@@ -129,7 +163,7 @@ export function DashboardPage({
             {backendAvailable ? "Indexer live" : "Indexer degraded"}
           </span>
         </div>
-        <div className="table table-tight">
+        <div className="signal-board">
           {signals.map((signal) => (
             <button
               key={signal.id}
@@ -173,6 +207,17 @@ export function DashboardPage({
               <strong>{selectedSignal?.severity}</strong>
             </div>
           </div>
+          {selectedSignal?.evidence?.length ? (
+            <div className="evidence-stack">
+              {selectedSignal.evidence.map((item) => (
+                <article key={item.id} className="evidence-card">
+                  <div className="eyebrow">{item.type}</div>
+                  <h3>{item.title}</h3>
+                  <p className="copy">{item.body}</p>
+                </article>
+              ))}
+            </div>
+          ) : null}
           <div className="cta-row">
             {selectedSignal ? (
               <button className="button" onClick={() => void recordSignal(selectedSignal)}>
@@ -227,15 +272,50 @@ export function DashboardPage({
         </article>
       </section>
 
-      <section className="panel">
-        <div className="section-heading">
+      <section className="dashboard-grid dashboard-grid-secondary">
+        <article className="panel">
+          <div className="section-heading">
+            <div>
+              <div className="eyebrow">Alert routes</div>
+              <h2>Persist watcher rules to the backend</h2>
+            </div>
+          </div>
+          <form className="stack" onSubmit={createAlert}>
+            <select className="input" value={alertChannel} onChange={(event) => setAlertChannel(event.target.value)}>
+              <option value="telegram">Telegram</option>
+              <option value="discord">Discord</option>
+              <option value="email">Email</option>
+            </select>
+            <textarea
+              className="textarea"
+              value={alertCondition}
+              onChange={(event) => setAlertCondition(event.target.value)}
+              minLength={8}
+              required
+            />
+            <button className="button secondary" type="submit">
+              Save alert rule
+            </button>
+          </form>
+          <div className="alert-list">
+            {(alertRules ?? []).map((rule) => (
+              <div key={rule.id} className="alert-row">
+                <strong>{rule.channel}</strong>
+                <span className="copy">{rule.condition}</span>
+              </div>
+            ))}
+            {alertsLoading ? <p className="copy">Loading alert rules…</p> : null}
+          </div>
+        </article>
+        <article className="panel">
+          <div className="section-heading">
           <div>
             <div className="eyebrow">Starter library</div>
             <h2>Open a ready-made operator move</h2>
           </div>
-        </div>
-        <div className="card-grid">
-          {appConfig.starterCards.map((card) => (
+          </div>
+          <div className="starter-editorial-grid">
+          {starters.map((card) => (
             <article key={card.id} className="story-card">
               <h3>{card.title}</h3>
               <p className="copy">{card.summary}</p>
@@ -244,7 +324,8 @@ export function DashboardPage({
               </button>
             </article>
           ))}
-        </div>
+          </div>
+        </article>
       </section>
     </main>
   );

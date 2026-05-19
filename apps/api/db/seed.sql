@@ -74,6 +74,44 @@ values
   )
 on conflict (id) do nothing;
 
+insert into starter_workflows (id, title, summary, cta, thesis, signal_id)
+values
+  (
+    '50000000-0000-0000-0000-000000000001',
+    'Promote the cmETH rotation thesis',
+    'Take the highest-conviction capital move on the board and open a ready-to-publish operator thesis for Mantle judges and traders.',
+    'Use this thesis',
+    'Sticky yield wallets are reducing directional beta and rebuilding through cmETH/USDe. The move looks like defensive capital preservation, not a full risk-off exit, which supports a follow-on watch on low-volatility yield routes.',
+    '20000000-0000-0000-0000-000000000001'
+  ),
+  (
+    '50000000-0000-0000-0000-000000000002',
+    'Load the treasury allocator watch',
+    'Pre-fill a slower-moving treasury thesis focused on USDY accumulation and lower-churn capital.',
+    'Load watch note',
+    'Treasury-style wallets are behaving like slow, mandate-driven allocators. The USDY increase should be treated as a durable reweighting signal and not a short-term incentive chase.',
+    '20000000-0000-0000-0000-000000000002'
+  )
+on conflict (id) do nothing;
+
+insert into alert_rules (id, user_id, channel, condition, is_enabled)
+values
+  (
+    '60000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-000000000002',
+    'telegram',
+    'Fire when confidence rises above 85 and cmETH rotation accelerates.',
+    true
+  ),
+  (
+    '60000000-0000-0000-0000-000000000002',
+    '00000000-0000-0000-0000-000000000002',
+    'discord',
+    'Notify when treasury-style wallets increase USDY accumulation.',
+    true
+  )
+on conflict (id) do nothing;
+
 insert into audit_logs (id, actor_email, action, target_type, target_id, reason)
 values
   (

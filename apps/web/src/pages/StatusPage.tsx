@@ -1,11 +1,15 @@
+import { getJson } from "../api";
 import { appConfig } from "../config";
-import type { ServiceHealth } from "../types";
+import { useApi } from "../hooks/useApi";
+import type { RuntimeStatus, ServiceHealth } from "../types";
 
 type StatusPageProps = {
   health: ServiceHealth;
 };
 
 export function StatusPage({ health }: StatusPageProps) {
+  const { data: status } = useApi(() => getJson<RuntimeStatus>("/status"));
+
   return (
     <main className="page-stack">
       <section className="panel premium">
@@ -35,6 +39,28 @@ export function StatusPage({ health }: StatusPageProps) {
             <div>RPC</div>
             <div className="muted">{appConfig.rpcUrl}</div>
           </div>
+          {status ? (
+            <>
+              <div className="row">
+                <div>Signals indexed</div>
+                <div>{status.signalCount}</div>
+                <div>Starter workflows</div>
+                <div>{status.starterCount}</div>
+              </div>
+              <div className="row">
+                <div>Alert rules</div>
+                <div>{status.alertCount}</div>
+                <div>Tracked theses</div>
+                <div>{status.thesisCount}</div>
+              </div>
+              <div className="row">
+                <div>Latest worker</div>
+                <div className="muted">{status.heartbeats[0]?.serviceName ?? "not yet reported"}</div>
+                <div>Heartbeat</div>
+                <div className="muted">{status.heartbeats[0]?.lastRanAt ?? "not yet reported"}</div>
+              </div>
+            </>
+          ) : null}
         </div>
       </section>
     </main>

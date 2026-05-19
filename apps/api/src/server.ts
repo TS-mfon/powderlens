@@ -11,14 +11,22 @@ import {
   createWalletLabel,
   getAlertRules,
   getProtocols,
+  getRuntimeStatus,
   getSignals,
+  getStarterWorkflows,
   getTheses,
   getWalletByAddress,
   getWatchlists
 } from "./repository.js";
 
 const app = express();
-app.use(cors());
+const allowedOrigins = env.CORS_ORIGINS?.split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(cors({
+  origin: allowedOrigins && allowedOrigins.length > 0 ? allowedOrigins : true
+}));
 app.use(express.json());
 
 const asyncRoute =
@@ -30,10 +38,14 @@ app.get("/health", asyncRoute(async (_req, res) => {
   await pool.query("select 1");
   res.json({
     status: "ok",
-    service: "powderlens-api",
+    service: `${env.POSTGRES_DB}-api`,
     environment: env.NODE_ENV,
     timestamp: new Date().toISOString()
   });
+}));
+
+app.get("/status", asyncRoute(async (_req, res) => {
+  res.json(await getRuntimeStatus(`${env.POSTGRES_DB}-api`, env.POSTGRES_DB));
 }));
 
 app.get("/live-feed", asyncRoute(async (_req, res) => {
@@ -45,6 +57,10 @@ app.get("/live-feed", asyncRoute(async (_req, res) => {
 
 app.get("/signals", asyncRoute(async (_req, res) => {
   res.json(await getSignals());
+}));
+
+app.get("/starter-workflows", asyncRoute(async (_req, res) => {
+  res.json(await getStarterWorkflows());
 }));
 
 app.get("/signals/:id", asyncRoute(async (req, res) => {

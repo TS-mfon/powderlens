@@ -55,6 +55,22 @@ export const getSignals = async () => {
   }));
 };
 
+export const getStarterWorkflows = async () => {
+  return query<{
+    id: string;
+    title: string;
+    summary: string;
+    cta: string;
+    thesis: string;
+    signal_id: string | null;
+    created_at: string;
+  }>(
+    `select id, title, summary, cta, thesis, signal_id, created_at
+     from starter_workflows
+     order by created_at desc`
+  );
+};
+
 export const getWalletByAddress = async (address: string) => {
   const rows = await query<{
     address: string;
@@ -115,7 +131,7 @@ export const createAlertRule = async (channel: string, condition: string) => {
 };
 
 export const getAlertRules = async () => {
-  return query<{
+  const rows = await query<{
     id: string;
     channel: string;
     condition: string;
@@ -126,6 +142,14 @@ export const getAlertRules = async () => {
      from alert_rules
      order by created_at desc`
   );
+
+  return rows.map((row) => ({
+    id: row.id,
+    channel: row.channel,
+    condition: row.condition,
+    isEnabled: row.is_enabled,
+    createdAt: row.created_at
+  }));
 };
 
 export const createThesis = async (signalId: string, thesis: string) => {
@@ -212,4 +236,44 @@ export const createWalletLabel = async (
   );
 
   return rows[0];
+};
+
+export const getRuntimeStatus = async (serviceName: string, databaseName: string) => {
+  const [{ total: signalCount }] = await query<{ total: string }>(
+    "select count(*)::text as total from rotation_signals"
+  );
+  const [{ total: starterCount }] = await query<{ total: string }>(
+    "select count(*)::text as total from starter_workflows"
+  );
+  const [{ total: alertCount }] = await query<{ total: string }>(
+    "select count(*)::text as total from alert_rules"
+  );
+  const [{ total: thesisCount }] = await query<{ total: string }>(
+    "select count(*)::text as total from saved_theses"
+  );
+  const heartbeats = await query<{
+    service_name: string;
+    status: string;
+    details: string;
+    last_ran_at: string;
+  }>(
+    `select service_name, status, details, last_ran_at
+     from worker_heartbeats
+     order by last_ran_at desc`
+  );
+
+  return {
+    service: serviceName,
+    database: databaseName,
+    signalCount: Number(signalCount),
+    starterCount: Number(starterCount),
+    alertCount: Number(alertCount),
+    thesisCount: Number(thesisCount),
+    heartbeats: heartbeats.map((item) => ({
+      serviceName: item.service_name,
+      status: item.status,
+      details: item.details,
+      lastRanAt: item.last_ran_at
+    }))
+  };
 };

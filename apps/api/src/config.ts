@@ -7,6 +7,7 @@ const envSchema = z.object({
   POSTGRES_DB: z.string().default("powderlens"),
   POSTGRES_USER: z.string().default("powderlens"),
   POSTGRES_PASSWORD: z.string().default("change-me"),
+  CORS_ORIGINS: z.string().optional(),
   NODE_ENV: z.string().default("development")
 });
 

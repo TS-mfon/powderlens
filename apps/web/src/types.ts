@@ -9,6 +9,12 @@ export type Signal = {
   sourceAsset: string;
   destinationAsset: string;
   createdAt?: string;
+  evidence?: Array<{
+    id: string;
+    type: string;
+    title: string;
+    body: string;
+  }>;
 };
 
 export type AlertRule = {
@@ -121,6 +127,21 @@ export type ServiceHealth = {
   backendAvailable: boolean;
   lastCheckedAt: string | null;
   message: string;
+};
+
+export type RuntimeStatus = {
+  service: string;
+  database: string;
+  signalCount: number;
+  starterCount: number;
+  alertCount: number;
+  thesisCount: number;
+  heartbeats: Array<{
+    serviceName: string;
+    status: string;
+    details: string;
+    lastRanAt: string;
+  }>;
 };
 
 export type ToastItem = {

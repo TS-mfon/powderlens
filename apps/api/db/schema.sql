@@ -63,6 +63,16 @@ create table if not exists saved_theses (
   created_at timestamptz not null default now()
 );
 
+create table if not exists starter_workflows (
+  id uuid primary key,
+  title text not null,
+  summary text not null,
+  cta text not null,
+  thesis text not null,
+  signal_id uuid references rotation_signals(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists audit_logs (
   id uuid primary key,
   actor_email text not null,
@@ -71,4 +81,11 @@ create table if not exists audit_logs (
   target_id text not null,
   reason text not null,
   created_at timestamptz not null default now()
+);
+
+create table if not exists worker_heartbeats (
+  service_name text primary key,
+  status text not null,
+  details text not null default '',
+  last_ran_at timestamptz not null default now()
 );
