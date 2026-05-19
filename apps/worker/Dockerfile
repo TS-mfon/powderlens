@@ -6,6 +6,4 @@ COPY apps/worker/package.json apps/worker/package.json
 RUN npm install --workspace apps/worker
 
 COPY apps/worker apps/worker
-RUN npm run build -w apps/worker
-
-CMD ["npm", "run", "start", "-w", "apps/worker"]
+CMD ["npx", "tsx", "apps/worker/src/index.ts"]

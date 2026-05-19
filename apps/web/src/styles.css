@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=Sora:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap");
+
 :root {
   --bg: #071019;
   --surface: rgba(10, 22, 32, 0.78);
@@ -11,6 +13,8 @@
   --glow-a: rgba(60, 230, 175, 0.22);
   --glow-b: rgba(4, 195, 255, 0.16);
   --brand-gradient: linear-gradient(135deg, #87ffd6 0%, #04c3ff 100%);
+  --headline-font: "Space Grotesk", "Inter", sans-serif;
+  --body-font: "IBM Plex Sans", "Inter", sans-serif;
 }
 
 * {
@@ -27,7 +31,8 @@ body,
     radial-gradient(circle at bottom right, var(--glow-b), transparent 34%),
     var(--bg);
   color: var(--text);
-  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  font-family: var(--body-font);
+  scroll-behavior: smooth;
 }
 
 body {
@@ -74,6 +79,7 @@ select {
 }
 
 .brand-name {
+  font-family: var(--headline-font);
   font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -180,9 +186,17 @@ select {
 .headline {
   margin: 0;
   max-width: 880px;
+  font-family: var(--headline-font);
   font-size: clamp(2.8rem, 5vw, 5.8rem);
   line-height: 0.94;
   letter-spacing: -0.05em;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--headline-font);
+  letter-spacing: -0.03em;
 }
 
 .copy {
@@ -416,6 +430,37 @@ select {
   color: var(--text);
   text-align: left;
   transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.signal-row:hover,
+.story-card:hover,
+.alert-row:hover,
+.evidence-card:hover {
+  transform: translateY(-2px);
+}
+
+.signal-row:hover {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.story-card,
+.alert-row,
+.evidence-card,
+.metric-panel,
+.metric-feature,
+.detail-panel,
+.composer-panel {
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.story-card:hover,
+.evidence-card:hover,
+.alert-row:hover,
+.metric-panel:hover,
+.metric-feature:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
 }
 
 .signal-row:hover,
@@ -926,6 +971,213 @@ select.input {
 .theme-nest .story-card {
   background: rgba(255, 255, 255, 0.035);
   border-radius: 28px;
+}
+
+.theme-powderlens {
+  --headline-font: "Space Grotesk", "Inter", sans-serif;
+  --body-font: "IBM Plex Sans", "Inter", sans-serif;
+}
+
+.theme-powderlens .hero-manifesto::before {
+  content: "";
+  position: absolute;
+  inset: 24px 24px auto auto;
+  width: 160px;
+  height: 160px;
+  border-right: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  opacity: 0.7;
+}
+
+.theme-powderlens .signal-row {
+  border-radius: 20px 20px 20px 8px;
+}
+
+.theme-powderlens .signal-row.active {
+  border-color: var(--accent);
+  background: linear-gradient(90deg, rgba(135, 255, 214, 0.12), rgba(255, 255, 255, 0.02));
+}
+
+.theme-atlasyield {
+  --headline-font: "Manrope", "Inter", sans-serif;
+  --body-font: "Inter", sans-serif;
+}
+
+.theme-atlasyield .topbar,
+.theme-atlasyield .panel {
+  border-radius: 18px;
+}
+
+.theme-atlasyield .hero-split {
+  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
+  align-items: stretch;
+}
+
+.theme-atlasyield .hero-manifesto {
+  min-height: 540px;
+  border-radius: 20px 20px 120px 20px;
+}
+
+.theme-atlasyield .hero-manifesto::after {
+  inset: auto 4% -12% 30%;
+  filter: blur(110px);
+}
+
+.theme-atlasyield .metric-feature,
+.theme-atlasyield .metric-panel,
+.theme-atlasyield .story-card,
+.theme-atlasyield .evidence-card,
+.theme-atlasyield .alert-row {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015));
+  border-radius: 14px;
+}
+
+.theme-atlasyield .dashboard-grid {
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+}
+
+.theme-atlasyield .detail-panel {
+  border-left: 4px solid var(--accent);
+}
+
+.theme-porter-finance {
+  --headline-font: "Sora", "Inter", sans-serif;
+  --body-font: "Inter", sans-serif;
+}
+
+.theme-porter-finance .topbar {
+  border-radius: 26px;
+}
+
+.theme-porter-finance .hero-split {
+  grid-template-columns: minmax(320px, 0.88fr) minmax(0, 1.12fr);
+}
+
+.theme-porter-finance .hero-manifesto {
+  min-height: 500px;
+  border-radius: 28px;
+}
+
+.theme-porter-finance .hero-rail {
+  gap: 24px;
+}
+
+.theme-porter-finance .panel {
+  border-radius: 28px;
+}
+
+.theme-porter-finance .story-card,
+.theme-porter-finance .alert-row,
+.theme-porter-finance .evidence-card {
+  border-radius: 24px;
+}
+
+.theme-porter-finance .button,
+.theme-porter-finance .button.secondary,
+.theme-porter-finance .button.ghost,
+.theme-porter-finance .health-pill {
+  border-radius: 16px;
+}
+
+.theme-porter-finance .dashboard-grid {
+  grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+}
+
+.theme-forgepilot-mantle {
+  --headline-font: "Space Grotesk", "Inter", sans-serif;
+  --body-font: "IBM Plex Sans", "Inter", sans-serif;
+}
+
+.theme-forgepilot-mantle .shell {
+  position: relative;
+}
+
+.theme-forgepilot-mantle .shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(120, 198, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 198, 255, 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(circle at center, black, transparent 78%);
+}
+
+.theme-forgepilot-mantle .hero-manifesto {
+  border-radius: 12px;
+}
+
+.theme-forgepilot-mantle .topbar,
+.theme-forgepilot-mantle .panel,
+.theme-forgepilot-mantle .story-card,
+.theme-forgepilot-mantle .evidence-card,
+.theme-forgepilot-mantle .alert-row {
+  border-radius: 12px;
+}
+
+.theme-forgepilot-mantle .signal-row {
+  border-radius: 12px;
+}
+
+.theme-forgepilot-mantle .signal-row.active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px rgba(120, 198, 255, 0.22);
+}
+
+.theme-forgepilot-mantle .metric-feature,
+.theme-forgepilot-mantle .metric-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-forgepilot-mantle .metric-feature::after,
+.theme-forgepilot-mantle .metric-panel::after {
+  content: "";
+  position: absolute;
+  inset: auto -10% -40px 35%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+
+.theme-nest {
+  --headline-font: "Manrope", "Inter", sans-serif;
+  --body-font: "Inter", sans-serif;
+}
+
+.theme-nest .hero-split {
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.98fr);
+}
+
+.theme-nest .hero-manifesto {
+  min-height: 520px;
+  border-radius: 30px 30px 120px 30px;
+}
+
+.theme-nest .hero-note,
+.theme-nest .panel {
+  border-radius: 26px;
+}
+
+.theme-nest .metric-feature {
+  min-height: 300px;
+}
+
+.theme-nest .starter-editorial-grid {
+  grid-template-columns: 1.1fr 0.9fr;
+}
+
+.theme-nest .story-card,
+.theme-nest .alert-row,
+.theme-nest .evidence-card {
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018));
+}
+
+.theme-nest .button,
+.theme-nest .button.secondary,
+.theme-nest .button.ghost {
+  min-height: 50px;
 }
 
 @media (max-width: 1120px) {
