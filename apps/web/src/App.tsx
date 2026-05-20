@@ -120,7 +120,11 @@ export function App() {
         </nav>
         <div className="topbar-actions">
           <span className={`health-pill ${health.backendAvailable ? "healthy" : "degraded"}`}>
-            {health.backendAvailable ? "Backend live" : "Backend degraded"}
+            {health.backendAvailable
+              ? health.runtimeOrigin === "render"
+                ? "Render fallback"
+                : "Backend live"
+              : "Backend degraded"}
           </span>
           <button className="button" onClick={() => void connect()}>
             {wallet.isConnected && wallet.account ? shorten(wallet.account) : wallet.isConnecting ? "Connecting..." : "Connect wallet"}

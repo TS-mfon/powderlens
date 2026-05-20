@@ -238,7 +238,12 @@ export const createWalletLabel = async (
   return rows[0];
 };
 
-export const getRuntimeStatus = async (serviceName: string, databaseName: string) => {
+export const getRuntimeStatus = async (
+  serviceName: string,
+  databaseName: string,
+  runtimeOrigin: "vps" | "render",
+  backendRole: "primary" | "fallback"
+) => {
   const [{ total: signalCount }] = await query<{ total: string }>(
     "select count(*)::text as total from rotation_signals"
   );
@@ -265,6 +270,8 @@ export const getRuntimeStatus = async (serviceName: string, databaseName: string
   return {
     service: serviceName,
     database: databaseName,
+    runtimeOrigin,
+    backendRole,
     signalCount: Number(signalCount),
     starterCount: Number(starterCount),
     alertCount: Number(alertCount),

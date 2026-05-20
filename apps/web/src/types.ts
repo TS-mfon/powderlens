@@ -127,11 +127,15 @@ export type ServiceHealth = {
   backendAvailable: boolean;
   lastCheckedAt: string | null;
   message: string;
+  runtimeOrigin?: "vps" | "render" | null;
+  backendRole?: "primary" | "fallback" | null;
 };
 
 export type RuntimeStatus = {
   service: string;
   database: string;
+  runtimeOrigin: "vps" | "render";
+  backendRole: "primary" | "fallback";
   signalCount: number;
   starterCount: number;
   alertCount: number;

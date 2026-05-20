@@ -11,7 +11,9 @@ export function useServiceHealth() {
   const [health, setHealth] = useState<ServiceHealth>({
     backendAvailable: false,
     lastCheckedAt: null,
-    message: unavailableMessage
+    message: unavailableMessage,
+    runtimeOrigin: null,
+    backendRole: null
   });
 
   useEffect(() => {
@@ -23,7 +25,9 @@ export function useServiceHealth() {
           setHealth({
             backendAvailable: false,
             lastCheckedAt: new Date().toISOString(),
-            message: unavailableMessage
+            message: unavailableMessage,
+            runtimeOrigin: null,
+            backendRole: null
           });
         }
         return;
@@ -34,15 +38,26 @@ export function useServiceHealth() {
 
       try {
         const response = await fetch(`${apiBase}/health`, { signal: controller.signal });
-        const payload = response.ok ? ((await response.json()) as { status?: string }) : null;
+        const payload = response.ok
+          ? ((await response.json()) as {
+              status?: string;
+              runtimeOrigin?: "vps" | "render";
+              backendRole?: "primary" | "fallback";
+            })
+          : null;
 
         if (active) {
+          const backendAvailable = Boolean(response.ok && payload?.status === "ok");
           setHealth({
-            backendAvailable: Boolean(response.ok && payload?.status === "ok"),
+            backendAvailable,
             lastCheckedAt: new Date().toISOString(),
-            message: response.ok
-              ? "Backend services are healthy."
-              : unavailableMessage
+            message: backendAvailable
+              ? payload?.runtimeOrigin === "render"
+                ? "Render fallback is currently serving backend traffic."
+                : "Primary backend services are healthy."
+              : unavailableMessage,
+            runtimeOrigin: payload?.runtimeOrigin ?? null,
+            backendRole: payload?.backendRole ?? null
           });
         }
       } catch {
@@ -50,7 +65,9 @@ export function useServiceHealth() {
           setHealth({
             backendAvailable: false,
             lastCheckedAt: new Date().toISOString(),
-            message: unavailableMessage
+            message: unavailableMessage,
+            runtimeOrigin: null,
+            backendRole: null
           });
         }
       } finally {

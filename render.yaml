@@ -1,0 +1,47 @@
+databases:
+  - name: powderlens-postgres-fallback
+    databaseName: powderlens
+    user: powderlens
+    plan: free
+
+services:
+  - type: web
+    name: powderlens-api-fallback
+    runtime: node
+    rootDir: .
+    plan: free
+    autoDeploy: false
+    buildCommand: npm install
+    startCommand: npx tsx apps/api/src/server.ts
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_PORT
+        value: 10000
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: powderlens-postgres-fallback
+          property: database
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: powderlens-postgres-fallback
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: powderlens-postgres-fallback
+          property: password
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: powderlens-postgres-fallback
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: powderlens-postgres-fallback
+          property: port
+      - key: CORS_ORIGINS
+        value: https://powderlens.vercel.app
+      - key: RUNTIME_ORIGIN
+        value: render
+      - key: BACKEND_ROLE
+        value: fallback

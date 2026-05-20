@@ -16,7 +16,7 @@ export function StatusPage({ health }: StatusPageProps) {
         <div className="eyebrow">System status</div>
         <h1>Runtime and contract environment</h1>
         <p className="copy">
-          The frontend monitors the VPS health endpoint continuously. If the backend degrades, the site keeps Mantle transactions available and informs the user without crashing.
+          The frontend probes the primary backend and automatically falls back to Render when the VPS is unavailable. If both runtimes degrade, the site keeps Mantle transactions available and informs the user without crashing.
         </p>
       </section>
       <section className="panel">
@@ -26,6 +26,12 @@ export function StatusPage({ health }: StatusPageProps) {
             <div>{health.backendAvailable ? "healthy" : "degraded"}</div>
             <div>Last check</div>
             <div className="muted">{health.lastCheckedAt ?? "not available"}</div>
+          </div>
+          <div className="row">
+            <div>Active runtime</div>
+            <div>{health.runtimeOrigin ?? "unreachable"}</div>
+            <div>Backend role</div>
+            <div className="muted">{health.backendRole ?? "unreachable"}</div>
           </div>
           <div className="row">
             <div>Signal registry</div>
@@ -41,6 +47,12 @@ export function StatusPage({ health }: StatusPageProps) {
           </div>
           {status ? (
             <>
+              <div className="row">
+                <div>Runtime origin</div>
+                <div>{status.runtimeOrigin}</div>
+                <div>Response role</div>
+                <div className="muted">{status.backendRole}</div>
+              </div>
               <div className="row">
                 <div>Signals indexed</div>
                 <div>{status.signalCount}</div>

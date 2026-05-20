@@ -40,12 +40,21 @@ app.get("/health", asyncRoute(async (_req, res) => {
     status: "ok",
     service: `${env.POSTGRES_DB}-api`,
     environment: env.NODE_ENV,
+    runtimeOrigin: env.RUNTIME_ORIGIN,
+    backendRole: env.BACKEND_ROLE,
     timestamp: new Date().toISOString()
   });
 }));
 
 app.get("/status", asyncRoute(async (_req, res) => {
-  res.json(await getRuntimeStatus(`${env.POSTGRES_DB}-api`, env.POSTGRES_DB));
+  res.json(
+    await getRuntimeStatus(
+      `${env.POSTGRES_DB}-api`,
+      env.POSTGRES_DB,
+      env.RUNTIME_ORIGIN,
+      env.BACKEND_ROLE
+    )
+  );
 }));
 
 app.get("/live-feed", asyncRoute(async (_req, res) => {
