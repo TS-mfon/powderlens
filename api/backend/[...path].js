@@ -110,6 +110,7 @@ async function isPrimaryHealthy() {
 }
 
 async function sendProxyResponse(res, response, runtimeOrigin) {
+  const backendRole = runtimeOrigin === "render" ? "fallback" : "primary";
   res.statusCode = response.status;
 
   response.headers.forEach((value, key) => {
@@ -119,6 +120,7 @@ async function sendProxyResponse(res, response, runtimeOrigin) {
   });
 
   res.setHeader("x-runtime-origin", runtimeOrigin);
+  res.setHeader("x-backend-role", backendRole);
   const body = Buffer.from(await response.arrayBuffer());
   res.send(body);
 }

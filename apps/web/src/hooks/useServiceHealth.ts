@@ -48,16 +48,22 @@ export function useServiceHealth() {
 
         if (active) {
           const backendAvailable = Boolean(response.ok && payload?.status === "ok");
+          const runtimeOrigin =
+            payload?.runtimeOrigin ??
+            ((response.headers.get("x-runtime-origin") as "vps" | "render" | null) ?? null);
+          const backendRole =
+            payload?.backendRole ??
+            ((response.headers.get("x-backend-role") as "primary" | "fallback" | null) ?? null);
           setHealth({
             backendAvailable,
             lastCheckedAt: new Date().toISOString(),
             message: backendAvailable
-              ? payload?.runtimeOrigin === "render"
+              ? runtimeOrigin === "render"
                 ? "Render fallback is currently serving backend traffic."
                 : "Primary backend services are healthy."
               : unavailableMessage,
-            runtimeOrigin: payload?.runtimeOrigin ?? null,
-            backendRole: payload?.backendRole ?? null
+            runtimeOrigin,
+            backendRole
           });
         }
       } catch {
