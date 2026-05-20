@@ -45,30 +45,10 @@ async function readBody(req) {
 }
 
 function buildPath(req) {
-  const parts = Array.isArray(req.query.path)
-    ? req.query.path
-    : typeof req.query.path === "string"
-      ? [req.query.path]
-      : [];
-
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(req.query)) {
-    if (key === "path" || value == null) {
-      continue;
-    }
-
-    if (Array.isArray(value)) {
-      for (const item of value) {
-        search.append(key, item);
-      }
-    } else {
-      search.append(key, value);
-    }
-  }
-
-  const path = parts.join("/");
-  const query = search.toString();
-  return query ? `/${path}?${query}` : `/${path}`;
+  const parsed = new URL(req.url || "/", "https://local-gateway.vercel.app");
+  const pathname = parsed.pathname.replace(/^\/(?:api\/)?backend\/?/, "/");
+  const normalizedPath = pathname === "/" ? "/health" : pathname;
+  return `${normalizedPath}${parsed.search}`;
 }
 
 function copyRequestHeaders(req) {
