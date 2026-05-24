@@ -1,5 +1,6 @@
 import cors from "cors";
 import express from "express";
+import { readFile } from "node:fs/promises";
 import { z } from "zod";
 
 import { env } from "./config.js";
@@ -38,6 +39,13 @@ const asyncRoute =
   <T extends express.RequestHandler>(handler: T): express.RequestHandler =>
   (req, res, next) =>
     Promise.resolve(handler(req, res, next)).catch(next);
+
+const applyDatabaseBootstrap = async () => {
+  const schemaSql = await readFile(new URL("../db/schema.sql", import.meta.url), "utf8");
+  const seedSql = await readFile(new URL("../db/seed.sql", import.meta.url), "utf8");
+  await pool.query(schemaSql);
+  await pool.query(seedSql);
+};
 
 app.get("/health", asyncRoute(async (_req, res) => {
   await pool.query("select 1");
@@ -318,6 +326,7 @@ app.use(
 );
 
 const bootstrap = async () => {
+  await applyDatabaseBootstrap();
   await pool.query("select 1");
   app.listen(env.API_PORT, () => {
     console.log(`${env.POSTGRES_DB} API listening on :${env.API_PORT}`);
