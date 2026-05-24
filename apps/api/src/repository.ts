@@ -1,4 +1,7 @@
 import { query } from "./db.js";
+import { getReplicationEvents, recordReplication } from "./replication.js";
+
+const systemUserId = "00000000-0000-0000-0000-000000000002";
 
 type SignalRow = {
   id: string;
@@ -10,6 +13,7 @@ type SignalRow = {
   destination_protocol: string;
   source_asset: string;
   destination_asset: string;
+  evidence_hash: string;
   created_at: string;
 };
 
@@ -21,9 +25,31 @@ type EvidenceRow = {
   body: string;
 };
 
+type FeedbackCountRow = {
+  signal_id: string;
+  accepted: string;
+  rejected: string;
+};
+
+const trackFromDatabase = (databaseName: string) => {
+  if (databaseName.includes("atlasyield")) {
+    return "AI x RWA";
+  }
+  if (databaseName.includes("porter")) {
+    return "Agentic Wallets & Economy";
+  }
+  if (databaseName.includes("forgepilot")) {
+    return "AI DevTools";
+  }
+  if (databaseName.includes("nest")) {
+    return "Consumer & Viral DApps";
+  }
+  return "AI Alpha & Data";
+};
+
 export const getSignals = async () => {
   const signals = await query<SignalRow>(
-    `select id, headline, summary, confidence, severity, source_protocol, destination_protocol, source_asset, destination_asset, created_at
+    `select id, headline, summary, confidence, severity, source_protocol, destination_protocol, source_asset, destination_asset, evidence_hash, created_at
      from rotation_signals
      order by created_at desc`
   );
@@ -43,6 +69,7 @@ export const getSignals = async () => {
     destinationProtocol: signal.destination_protocol,
     sourceAsset: signal.source_asset,
     destinationAsset: signal.destination_asset,
+    evidenceHash: signal.evidence_hash,
     createdAt: signal.created_at,
     evidence: evidence
       .filter((item) => item.signal_id === signal.id)
@@ -120,14 +147,25 @@ export const createAlertRule = async (channel: string, condition: string) => {
     channel: string;
     condition: string;
     is_enabled: boolean;
+    created_at: string;
   }>(
     `insert into alert_rules (id, user_id, channel, condition, is_enabled)
-     values (gen_random_uuid(), '00000000-0000-0000-0000-000000000002', $1, $2, true)
-     returning id, channel, condition, is_enabled`,
-    [channel, condition]
+     values (gen_random_uuid(), $1, $2, $3, true)
+     returning id, channel, condition, is_enabled, created_at`,
+    [systemUserId, channel, condition]
   );
 
-  return rows[0];
+  const row = rows[0];
+  const replication = await recordReplication("create_alert_rule", "alert_rules", row.id, {
+    id: row.id,
+    userId: systemUserId,
+    channel: row.channel,
+    condition: row.condition,
+    isEnabled: row.is_enabled,
+    createdAt: row.created_at
+  });
+
+  return { ...row, replication };
 };
 
 export const getAlertRules = async () => {
@@ -159,12 +197,22 @@ export const createThesis = async (signalId: string, thesis: string) => {
     created_at: string;
   }>(
     `insert into saved_theses (id, user_id, signal_id, thesis, status)
-     values (gen_random_uuid(), '00000000-0000-0000-0000-000000000002', $1, $2, 'tracking')
+     values (gen_random_uuid(), $1, $2, $3, 'tracking')
      returning id, status, created_at`,
-    [signalId, thesis]
+    [systemUserId, signalId, thesis]
   );
 
-  return rows[0];
+  const row = rows[0];
+  const replication = await recordReplication("create_thesis", "saved_theses", row.id, {
+    id: row.id,
+    userId: systemUserId,
+    signalId,
+    thesis,
+    status: row.status,
+    createdAt: row.created_at
+  });
+
+  return { ...row, replication };
 };
 
 export const getTheses = async () => {
@@ -188,12 +236,20 @@ export const createWatchlist = async (name: string) => {
     created_at: string;
   }>(
     `insert into watchlists (id, user_id, name)
-     values (gen_random_uuid(), '00000000-0000-0000-0000-000000000002', $1)
+     values (gen_random_uuid(), $1, $2)
      returning id, name, created_at`,
-    [name]
+    [systemUserId, name]
   );
 
-  return rows[0];
+  const row = rows[0];
+  const replication = await recordReplication("create_watchlist", "watchlists", row.id, {
+    id: row.id,
+    userId: systemUserId,
+    name: row.name,
+    createdAt: row.created_at
+  });
+
+  return { ...row, replication };
 };
 
 export const getWatchlists = async () => {
@@ -220,23 +276,165 @@ export const createWalletLabel = async (
     label: string;
     category: string;
     conviction: number;
+    created_at: string;
   }>(
     `insert into wallet_entities (id, address, label, category, conviction)
      values (gen_random_uuid(), $1, $2, $3, 70)
      on conflict (address)
      do update set label = excluded.label, category = excluded.category
-     returning id, address, label, category, conviction`,
+     returning id, address, label, category, conviction, created_at`,
     [address, label, category]
   );
 
   await query(
     `insert into audit_logs (id, actor_email, action, target_type, target_id, reason)
-     values (gen_random_uuid(), 'ops@powderlens.ai', 'upsert_wallet_label', 'wallet', $1, $2)`,
+     values (gen_random_uuid(), 'ops@mantle-ai.local', 'upsert_wallet_label', 'wallet', $1, $2)`,
     [address, reason]
   );
 
-  return rows[0];
+  const row = rows[0];
+  const replication = await recordReplication("upsert_wallet_label", "wallet_entities", row.id, {
+    id: row.id,
+    address: row.address,
+    label: row.label,
+    category: row.category,
+    conviction: row.conviction,
+    reason,
+    createdAt: row.created_at
+  });
+
+  return { ...row, replication };
 };
+
+export const getAiDecisions = async (databaseName: string) => {
+  const signals = await getSignals();
+  const feedback = await query<FeedbackCountRow>(
+    `select signal_id,
+            count(*) filter (where verdict = 'accepted')::text as accepted,
+            count(*) filter (where verdict = 'rejected')::text as rejected
+     from ai_feedback
+     group by signal_id`
+  );
+  const feedbackBySignal = new Map(feedback.map((item) => [item.signal_id, item]));
+  const track = trackFromDatabase(databaseName);
+
+  return signals.map((signal) => {
+    const accepted = Number(feedbackBySignal.get(signal.id)?.accepted ?? "0");
+    const rejected = Number(feedbackBySignal.get(signal.id)?.rejected ?? "0");
+    const consensusBoost = Math.min(8, accepted * 2) - Math.min(10, rejected * 3);
+    const score = Math.max(0, Math.min(99, signal.confidence + consensusBoost));
+    const directionalText = `${signal.sourceAsset} to ${signal.destinationAsset}`;
+    const volatilityText = signal.severity === "critical" ? "high volatility" : "controlled volatility";
+
+    const trackCopy = {
+      "AI Alpha & Data": {
+        type: "Smart-money anomaly",
+        action: `Validate ${directionalText} rotation, then write the signal and evidence hash to Mantle.`,
+        outcome: "Cleaner alpha feed with fewer false alerts and stronger whale-behavior confidence."
+      },
+      "AI x RWA": {
+        type: "RWA rebalance",
+        action: `Rebalance yield exposure from ${signal.sourceAsset} toward ${signal.destinationAsset} while monitoring ${volatilityText}.`,
+        outcome: "Risk-adjusted yield thesis for tokenized treasury and mETH style positions."
+      },
+      "Agentic Wallets & Economy": {
+        type: "Wallet autonomy policy",
+        action: `Schedule an agent action for ${signal.destinationProtocol} only if wallet limits and slippage rules pass.`,
+        outcome: "Self-driving wallet behavior with explicit policy constraints and reviewable execution logs."
+      },
+      "AI DevTools": {
+        type: "Execution optimizer",
+        action: `Simulate execution against ${signal.destinationProtocol} and select the cheapest safe path before writing results.`,
+        outcome: "Lower gas spend and safer contract interaction paths for Mantle developers."
+      },
+      "Consumer & Viral DApps": {
+        type: "Personalized quest economy",
+        action: `Turn the ${signal.destinationAsset} opportunity into a user-specific challenge with capped reward exposure.`,
+        outcome: "A Mantle-native consumer loop that converts market activity into explainable social quests."
+      }
+    }[track];
+
+    return {
+      id: signal.id,
+      signalId: signal.id,
+      track,
+      modelVersion: "mantle-ai-planner-v2",
+      decisionType: trackCopy.type,
+      score,
+      confidence: signal.confidence,
+      rationale: `${signal.headline}. The agent scores this using live Mantle signal confidence, severity, protocol path, evidence density, and operator feedback.`,
+      drivers: [
+        `${signal.sourceProtocol} to ${signal.destinationProtocol}`,
+        `${directionalText} path`,
+        `${signal.evidence?.length ?? 0} evidence records`,
+        `${accepted} accepted / ${rejected} rejected operator reviews`
+      ],
+      riskFlags: [
+        signal.severity === "critical" ? "critical-severity-review" : "standard-review",
+        rejected > accepted ? "operator-disagreement" : "feedback-aligned",
+        score < 70 ? "low-confidence" : "actionable-confidence"
+      ],
+      recommendedAction: trackCopy.action,
+      expectedOutcome: trackCopy.outcome,
+      feedback: { accepted, rejected },
+      evidenceHash: signal.evidenceHash,
+      createdAt: signal.createdAt
+    };
+  });
+};
+
+export const getAiDecisionById = async (databaseName: string, id: string) => {
+  return (await getAiDecisions(databaseName)).find((decision) => decision.id === id) ?? null;
+};
+
+export const createAiFeedback = async (
+  signalId: string,
+  verdict: "accepted" | "rejected",
+  note: string
+) => {
+  const rows = await query<{
+    id: string;
+    signal_id: string;
+    verdict: string;
+    note: string;
+    created_at: string;
+  }>(
+    `insert into ai_feedback (id, signal_id, user_id, verdict, note)
+     values (gen_random_uuid(), $1, $2, $3, $4)
+     returning id, signal_id, verdict, note, created_at`,
+    [signalId, systemUserId, verdict, note]
+  );
+
+  const row = rows[0];
+  const replication = await recordReplication("create_ai_feedback", "ai_feedback", row.id, {
+    id: row.id,
+    signalId: row.signal_id,
+    userId: systemUserId,
+    verdict: row.verdict,
+    note: row.note,
+    createdAt: row.created_at
+  });
+
+  return { ...row, replication };
+};
+
+export const getSignalPrediction = async (databaseName: string, signalId: string) => {
+  const decision = await getAiDecisionById(databaseName, signalId);
+  if (!decision) {
+    return null;
+  }
+
+  return {
+    signalId,
+    modelVersion: decision.modelVersion,
+    nextMoveProbability: decision.score,
+    recommendedAction: decision.recommendedAction,
+    expectedOutcome: decision.expectedOutcome,
+    riskFlags: decision.riskFlags
+  };
+};
+
+export const getReplicationQueue = async () => getReplicationEvents();
 
 export const getRuntimeStatus = async (
   serviceName: string,
@@ -255,6 +453,19 @@ export const getRuntimeStatus = async (
   );
   const [{ total: thesisCount }] = await query<{ total: string }>(
     "select count(*)::text as total from saved_theses"
+  );
+  const [{ total: aiFeedbackCount }] = await query<{ total: string }>(
+    "select count(*)::text as total from ai_feedback"
+  );
+  const [{ total: failedReplicationCount }] = await query<{ total: string }>(
+    "select count(*)::text as total from replication_events where status = 'failed'"
+  );
+  const latestReplication = await query<{ created_at: string }>(
+    `select created_at
+     from replication_events
+     where status = 'replicated'
+     order by created_at desc
+     limit 1`
   );
   const heartbeats = await query<{
     service_name: string;
@@ -276,6 +487,12 @@ export const getRuntimeStatus = async (
     starterCount: Number(starterCount),
     alertCount: Number(alertCount),
     thesisCount: Number(thesisCount),
+    aiFeedbackCount: Number(aiFeedbackCount),
+    replication: {
+      status: Number(failedReplicationCount) > 0 ? "degraded" : "healthy",
+      failedCount: Number(failedReplicationCount),
+      lastReplicationAt: latestReplication[0]?.created_at ?? null
+    },
     heartbeats: heartbeats.map((item) => ({
       serviceName: item.service_name,
       status: item.status,

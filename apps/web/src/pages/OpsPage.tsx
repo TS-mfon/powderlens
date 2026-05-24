@@ -2,7 +2,7 @@ import { useMemo } from "react";
 
 import { getJson } from "../api";
 import { useApi } from "../hooks/useApi";
-import type { AlertRule, Review } from "../types";
+import type { AlertRule, ReplicationEvent, Review } from "../types";
 
 type OpsPageProps = {
   backendAvailable: boolean;
@@ -11,13 +11,15 @@ type OpsPageProps = {
 export function OpsPage({ backendAvailable }: OpsPageProps) {
   const { data: alerts } = useApi(() => getJson<AlertRule[]>("/alerts"));
   const { data: reviews } = useApi(() => getJson<Review[]>("/admin/reviews"));
+  const { data: replicationEvents } = useApi(() => getJson<ReplicationEvent[]>("/replication-events"));
 
   const queues = useMemo(
     () => ({
       alerts: alerts ?? [],
-      reviews: reviews ?? []
+      reviews: reviews ?? [],
+      replicationEvents: replicationEvents ?? []
     }),
-    [alerts, reviews]
+    [alerts, reviews, replicationEvents]
   );
 
   return (
@@ -48,6 +50,28 @@ export function OpsPage({ backendAvailable }: OpsPageProps) {
               <div>{review.status}</div>
             </div>
           ))}
+        </div>
+      </section>
+      <section className="panel ops-wide">
+        <div className="eyebrow">VPS to Render consistency</div>
+        <h1>Replication ledger</h1>
+        <div className="table">
+          {queues.replicationEvents.map((event) => (
+            <div key={event.id} className="row">
+              <div>{event.action}</div>
+              <div>{event.status}</div>
+              <div className="muted">{event.sourceRole} to {event.targetRole}</div>
+              <div className="muted">{event.errorMessage || event.createdAt}</div>
+            </div>
+          ))}
+          {queues.replicationEvents.length === 0 ? (
+            <div className="row">
+              <div>No replication events</div>
+              <div className="muted">Writes will appear here after backend mutations.</div>
+              <div />
+              <div />
+            </div>
+          ) : null}
         </div>
       </section>
     </main>

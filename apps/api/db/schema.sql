@@ -89,3 +89,34 @@ create table if not exists worker_heartbeats (
   details text not null default '',
   last_ran_at timestamptz not null default now()
 );
+
+create table if not exists ai_feedback (
+  id uuid primary key,
+  signal_id uuid not null references rotation_signals(id) on delete cascade,
+  user_id uuid not null references users(id) on delete cascade,
+  verdict text not null,
+  note text not null default '',
+  created_at timestamptz not null default now()
+);
+
+create table if not exists ai_outcomes (
+  id uuid primary key,
+  signal_id uuid not null references rotation_signals(id) on delete cascade,
+  outcome text not null,
+  realized_score integer not null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists replication_events (
+  id uuid primary key,
+  action text not null,
+  target_table text not null,
+  target_id text not null,
+  payload jsonb not null,
+  source_role text not null,
+  target_role text not null,
+  status text not null,
+  error_message text not null default '',
+  created_at timestamptz not null default now(),
+  resolved_at timestamptz
+);

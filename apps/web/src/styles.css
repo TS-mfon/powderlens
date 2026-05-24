@@ -480,6 +480,78 @@ h3 {
   grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
 }
 
+.ai-decision-panel {
+  overflow: hidden;
+}
+
+.ai-decision-grid {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.ai-decision-card {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 18px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.025);
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.ai-decision-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.ai-score {
+  display: grid;
+  place-items: center;
+  min-height: 88px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--accent);
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.mini-chip {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.mini-chip.risk {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.decision-body {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0;
+}
+
+.decision-body span {
+  color: var(--muted);
+}
+
+.ops-wide {
+  grid-column: 1 / -1;
+}
+
 .meta-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -506,6 +578,11 @@ h3 {
   background: rgba(255, 255, 255, 0.03);
   color: var(--text);
   padding: 14px 16px;
+}
+
+.button:disabled {
+  cursor: wait;
+  opacity: 0.62;
 }
 
 .textarea {
@@ -1212,5 +1289,13 @@ select.input {
   .row,
   .signal-row {
     grid-template-columns: 1fr;
+  }
+
+  .ai-decision-card {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-score {
+    width: 88px;
   }
 }

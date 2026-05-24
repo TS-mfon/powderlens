@@ -66,6 +66,18 @@ export function StatusPage({ health }: StatusPageProps) {
                 <div>{status.thesisCount}</div>
               </div>
               <div className="row">
+                <div>AI feedback</div>
+                <div>{status.aiFeedbackCount}</div>
+                <div>Replication</div>
+                <div className="muted">{status.replication.status}</div>
+              </div>
+              <div className="row">
+                <div>Failed replications</div>
+                <div>{status.replication.failedCount}</div>
+                <div>Last replicated</div>
+                <div className="muted">{status.replication.lastReplicationAt ?? "not yet replicated"}</div>
+              </div>
+              <div className="row">
                 <div>Latest worker</div>
                 <div className="muted">{status.heartbeats[0]?.serviceName ?? "not yet reported"}</div>
                 <div>Heartbeat</div>

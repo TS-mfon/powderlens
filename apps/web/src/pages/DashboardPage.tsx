@@ -4,7 +4,7 @@ import { getJson, postJson } from "../api";
 import { appConfig } from "../config";
 import { useApi } from "../hooks/useApi";
 import { createThesisOnChain, recordSignalOnChain } from "../onchain";
-import type { AlertRule, Signal, StarterCard, ToastItem, TxState } from "../types";
+import type { AIDecision, AlertRule, Signal, StarterCard, ToastItem, TxState } from "../types";
 
 type DashboardPageProps = {
   backendAvailable: boolean;
@@ -24,16 +24,28 @@ export function DashboardPage({
   const { data, error, isLoading } = useApi(() => getJson<Signal[]>("/signals"));
   const { data: alertRules, isLoading: alertsLoading } = useApi(() => getJson<AlertRule[]>("/alerts"));
   const { data: starterWorkflows } = useApi(() => getJson<StarterCard[]>("/starter-workflows"));
+  const { data: aiDecisionData, isLoading: aiLoading } = useApi(() => getJson<AIDecision[]>("/ai-decisions"));
   const [selectedSignalId, setSelectedSignalId] = useState("");
   const [thesis, setThesis] = useState("");
   const [alertChannel, setAlertChannel] = useState("telegram");
   const [alertCondition, setAlertCondition] = useState("");
   const [txState, setTxState] = useState<TxState>({ status: "idle" });
+  const [aiDecisions, setAiDecisions] = useState<AIDecision[]>([]);
+  const [aiActionId, setAiActionId] = useState<string | null>(null);
 
   const signals = useMemo(() => data ?? [], [data]);
   const starters = useMemo(() => starterWorkflows ?? [], [starterWorkflows]);
+  useEffect(() => {
+    setAiDecisions(aiDecisionData ?? []);
+  }, [aiDecisionData]);
+
+  const selectedDecision =
+    aiDecisions.find((decision) => decision.signalId === selectedSignalId) ?? aiDecisions[0];
   const selectedSignal =
     signals.find((signal) => signal.id === selectedSignalId) ??
+    (selectedDecision?.signalId
+      ? signals.find((signal) => signal.id === selectedDecision.signalId)
+      : undefined) ??
     (starterDraft?.signalId
       ? signals.find((signal) => signal.id === starterDraft.signalId)
       : undefined) ??
@@ -94,25 +106,32 @@ export function DashboardPage({
     setTxState({ status: "pending", message: "Publishing thesis on Mantle..." });
 
     try {
+      const saved = await postJson<{
+        id: string;
+        replication?: { status: string; error?: string };
+      }>("/theses", {
+        signalId: selectedSignal.id,
+        thesis
+      });
       const result = await createThesisOnChain(selectedSignal, thesis);
       setTxState({
         status: "success",
-        message: "Thesis published on Mantle.",
+        message: `Thesis saved to backend, ${saved.replication?.status ?? "replication queued"}, and published on Mantle.`,
         hash: result.hash,
         explorerUrl: result.explorerUrl
       });
       onToast({
         title: "Thesis published",
-        body: selectedSignal.headline,
+        body: `${selectedSignal.headline} (${saved.replication?.status ?? "backend saved"})`,
         tone: "success",
         href: result.explorerUrl
       });
     } catch (txError) {
       const message =
-        txError instanceof Error ? txError.message : "Thesis transaction failed.";
+        txError instanceof Error ? txError.message : "Thesis save or transaction failed.";
       setTxState({ status: "error", message });
       onToast({
-        title: "Thesis transaction failed",
+        title: "Thesis publish failed",
         body: message,
         tone: "error"
       });
@@ -139,6 +158,51 @@ export function DashboardPage({
         body: alertError instanceof Error ? alertError.message : "Try again.",
         tone: "error"
       });
+    }
+  };
+
+  const sendAiFeedback = async (decision: AIDecision, verdict: "accepted" | "rejected") => {
+    setAiActionId(`${decision.id}:${verdict}`);
+
+    try {
+      const response = await postJson<{
+        verdict: "accepted" | "rejected";
+        replication?: { status: string; error?: string };
+      }>(`/ai-decisions/${decision.id}/feedback`, {
+        verdict,
+        note:
+          verdict === "accepted"
+            ? "Operator accepted the AI recommendation for on-chain execution."
+            : "Operator marked the AI recommendation as noisy or premature."
+      });
+
+      setAiDecisions((current) =>
+        current.map((item) =>
+          item.id === decision.id
+            ? {
+                ...item,
+                feedback: {
+                  ...item.feedback,
+                  accepted: item.feedback.accepted + (verdict === "accepted" ? 1 : 0),
+                  rejected: item.feedback.rejected + (verdict === "rejected" ? 1 : 0)
+                }
+              }
+            : item
+        )
+      );
+      onToast({
+        title: verdict === "accepted" ? "AI decision accepted" : "AI decision rejected",
+        body: `Feedback persisted with ${response.replication?.status ?? "backend"} replication status.`,
+        tone: "success"
+      });
+    } catch (feedbackError) {
+      onToast({
+        title: "AI feedback failed",
+        body: feedbackError instanceof Error ? feedbackError.message : "Feedback could not be saved.",
+        tone: "error"
+      });
+    } finally {
+      setAiActionId(null);
     }
   };
 
@@ -251,7 +315,7 @@ export function DashboardPage({
               className="textarea"
               value={thesis}
               onChange={(event) => setThesis(event.target.value)}
-              placeholder="Write the Mantle thesis you want judges and operators to see on-chain."
+              aria-label="Mantle thesis"
               minLength={20}
               required
             />
@@ -270,6 +334,77 @@ export function DashboardPage({
             </div>
           ) : null}
         </article>
+      </section>
+
+      <section className="panel ai-decision-panel">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">AI Awakening layer</div>
+            <h2>Agent decisions from live Mantle backend data</h2>
+            <p className="copy">
+              Each recommendation is computed from indexed signals, evidence density, severity, protocol path, and persisted operator feedback.
+            </p>
+          </div>
+          <span className="health-pill healthy">
+            {aiLoading ? "Model loading" : `${aiDecisions.length} decisions`}
+          </span>
+        </div>
+        <div className="ai-decision-grid">
+          {aiDecisions.map((decision) => (
+            <article key={decision.id} className="ai-decision-card">
+              <div className="ai-score">{decision.score}</div>
+              <div>
+                <div className="eyebrow">{decision.track}</div>
+                <h3>{decision.decisionType}</h3>
+                <p className="copy">{decision.rationale}</p>
+                <div className="chip-row">
+                  {decision.drivers.map((driver) => (
+                    <span key={driver} className="mini-chip">
+                      {driver}
+                    </span>
+                  ))}
+                </div>
+                <div className="decision-body">
+                  <strong>Recommended action</strong>
+                  <span>{decision.recommendedAction}</span>
+                </div>
+                <div className="decision-body">
+                  <strong>Expected outcome</strong>
+                  <span>{decision.expectedOutcome}</span>
+                </div>
+                <div className="chip-row risk-row">
+                  {decision.riskFlags.map((flag) => (
+                    <span key={flag} className="mini-chip risk">
+                      {flag}
+                    </span>
+                  ))}
+                </div>
+                <div className="cta-row">
+                  <button
+                    className="button"
+                    disabled={aiActionId === `${decision.id}:accepted`}
+                    onClick={() => void sendAiFeedback(decision, "accepted")}
+                  >
+                    {aiActionId === `${decision.id}:accepted` ? "Saving..." : "Accept AI call"}
+                  </button>
+                  <button
+                    className="button secondary"
+                    disabled={aiActionId === `${decision.id}:rejected`}
+                    onClick={() => void sendAiFeedback(decision, "rejected")}
+                  >
+                    {aiActionId === `${decision.id}:rejected` ? "Saving..." : "Mark false positive"}
+                  </button>
+                </div>
+                <div className="muted">
+                  Feedback: {decision.feedback.accepted} accepted / {decision.feedback.rejected} rejected
+                </div>
+              </div>
+            </article>
+          ))}
+          {!aiLoading && aiDecisions.length === 0 ? (
+            <p className="copy">No AI decisions are available until the backend indexes Mantle signals.</p>
+          ) : null}
+        </div>
       </section>
 
       <section className="dashboard-grid dashboard-grid-secondary">

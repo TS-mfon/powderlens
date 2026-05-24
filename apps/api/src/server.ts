@@ -6,12 +6,17 @@ import { env } from "./config.js";
 import { pool } from "./db.js";
 import {
   createAlertRule,
+  createAiFeedback,
   createThesis,
   createWatchlist,
   createWalletLabel,
   getAlertRules,
+  getAiDecisionById,
+  getAiDecisions,
   getProtocols,
+  getReplicationQueue,
   getRuntimeStatus,
+  getSignalPrediction,
   getSignals,
   getStarterWorkflows,
   getTheses,
@@ -83,6 +88,16 @@ app.get("/signals/:id", asyncRoute(async (req, res) => {
   res.json(signal);
 }));
 
+app.get("/signals/:id/prediction", asyncRoute(async (req, res) => {
+  const prediction = await getSignalPrediction(env.POSTGRES_DB, String(req.params.id));
+  if (!prediction) {
+    res.status(404).json({ message: "Signal prediction not found" });
+    return;
+  }
+
+  res.json(prediction);
+}));
+
 app.get("/wallets/:address", asyncRoute(async (req, res) => {
   const wallet = await getWalletByAddress(String(req.params.address));
   if (!wallet) {
@@ -106,6 +121,56 @@ app.get("/protocols/:slug", asyncRoute(async (req, res) => {
   }
 
   res.json(protocol);
+}));
+
+app.get("/ai-decisions", asyncRoute(async (_req, res) => {
+  res.json(await getAiDecisions(env.POSTGRES_DB));
+}));
+
+app.get("/ai-decisions/:id", asyncRoute(async (req, res) => {
+  const decision = await getAiDecisionById(env.POSTGRES_DB, String(req.params.id));
+  if (!decision) {
+    res.status(404).json({ message: "AI decision not found" });
+    return;
+  }
+
+  res.json(decision);
+}));
+
+const aiFeedbackSchema = z.object({
+  verdict: z.enum(["accepted", "rejected"]),
+  note: z.string().min(3).max(500).default("Operator reviewed decision")
+});
+
+app.post("/ai-decisions/:id/feedback", asyncRoute(async (req, res) => {
+  const parsed = aiFeedbackSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      message: "Invalid AI feedback payload",
+      issues: parsed.error.issues
+    });
+    return;
+  }
+
+  const decision = await getAiDecisionById(env.POSTGRES_DB, String(req.params.id));
+  if (!decision) {
+    res.status(404).json({ message: "AI decision not found" });
+    return;
+  }
+
+  const created = await createAiFeedback(decision.signalId, parsed.data.verdict, parsed.data.note);
+  res.status(201).json({
+    id: created.id,
+    signalId: created.signal_id,
+    verdict: created.verdict,
+    note: created.note,
+    createdAt: created.created_at,
+    replication: created.replication
+  });
+}));
+
+app.get("/replication-events", asyncRoute(async (_req, res) => {
+  res.json(await getReplicationQueue());
 }));
 
 const alertRuleSchema = z.object({
@@ -132,7 +197,8 @@ app.post("/alerts", asyncRoute(async (req, res) => {
     id: created.id,
     channel: created.channel,
     condition: created.condition,
-    isEnabled: created.is_enabled
+    isEnabled: created.is_enabled,
+    replication: created.replication
   });
 }));
 
@@ -161,7 +227,8 @@ app.post("/theses", asyncRoute(async (req, res) => {
     status: created.status,
     createdAt: created.created_at,
     signalId: parsed.data.signalId,
-    thesis: parsed.data.thesis
+    thesis: parsed.data.thesis,
+    replication: created.replication
   });
 }));
 
@@ -218,7 +285,8 @@ app.post("/admin/labels", asyncRoute(async (req, res) => {
     category: created.category,
     conviction: created.conviction,
     reason: parsed.data.reason,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    replication: created.replication
   });
 }));
 
@@ -242,7 +310,7 @@ app.use(
     res: express.Response,
     _next: express.NextFunction
   ) => {
-    console.error("[powderlens-api] unhandled route error", error);
+    console.error(`[${env.POSTGRES_DB}-api] unhandled route error`, error);
     res.status(500).json({
       message: "Internal server error"
     });
@@ -252,11 +320,11 @@ app.use(
 const bootstrap = async () => {
   await pool.query("select 1");
   app.listen(env.API_PORT, () => {
-    console.log(`PowderLens API listening on :${env.API_PORT}`);
+    console.log(`${env.POSTGRES_DB} API listening on :${env.API_PORT}`);
   });
 };
 
 bootstrap().catch((error) => {
-  console.error("Failed to start PowderLens API", error);
+  console.error(`Failed to start ${env.POSTGRES_DB} API`, error);
   process.exit(1);
 });

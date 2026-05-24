@@ -24,6 +24,46 @@ export type AlertRule = {
   is_enabled?: boolean;
   isEnabled?: boolean;
   createdAt?: string;
+  replication?: ReplicationResult;
+};
+
+export type ReplicationResult = {
+  status: "replicated" | "failed" | "disabled";
+  error?: string;
+};
+
+export type AIDecision = {
+  id: string;
+  signalId: string;
+  track: string;
+  modelVersion: string;
+  decisionType: string;
+  score: number;
+  confidence: number;
+  rationale: string;
+  drivers: string[];
+  riskFlags: string[];
+  recommendedAction: string;
+  expectedOutcome: string;
+  feedback: {
+    accepted: number;
+    rejected: number;
+  };
+  evidenceHash: string;
+  createdAt: string;
+};
+
+export type ReplicationEvent = {
+  id: string;
+  action: string;
+  targetTable: string;
+  targetId: string;
+  sourceRole: string;
+  targetRole: string;
+  status: string;
+  errorMessage: string;
+  createdAt: string;
+  resolvedAt: string | null;
 };
 
 export type Review = {
@@ -140,6 +180,12 @@ export type RuntimeStatus = {
   starterCount: number;
   alertCount: number;
   thesisCount: number;
+  aiFeedbackCount: number;
+  replication: {
+    status: string;
+    failedCount: number;
+    lastReplicationAt: string | null;
+  };
   heartbeats: Array<{
     serviceName: string;
     status: string;
