@@ -12,6 +12,7 @@ let cachedAt = 0;
 
 const hopByHopHeaders = new Set([
   "connection",
+  "content-encoding",
   "content-length",
   "host",
   "keep-alive",
@@ -55,7 +56,7 @@ function copyRequestHeaders(req) {
   const headers = new Headers();
 
   for (const [key, value] of Object.entries(req.headers)) {
-    if (!value || hopByHopHeaders.has(key.toLowerCase())) {
+    if (!value || hopByHopHeaders.has(key.toLowerCase()) || key.toLowerCase() === "accept-encoding") {
       continue;
     }
 
