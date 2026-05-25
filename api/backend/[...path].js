@@ -141,6 +141,11 @@ export default async function handler(req, res) {
   for (const target of order) {
     try {
       const response = await proxy(target.origin, req, body, REQUEST_TIMEOUT_MS);
+      if (!response.ok && target.runtimeOrigin === "vps") {
+        cachedPrimaryHealthy = false;
+        cachedAt = Date.now();
+        continue;
+      }
       if (target.runtimeOrigin === "vps") {
         cachedPrimaryHealthy = response.ok;
         cachedAt = Date.now();
