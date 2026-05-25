@@ -8,6 +8,7 @@ export const pool = new Pool({
   database: env.POSTGRES_DB,
   user: env.POSTGRES_USER,
   password: env.POSTGRES_PASSWORD,
+  options: `-c search_path=${env.POSTGRES_SCHEMA},public`,
   max: 10,
   idleTimeoutMillis: 30_000
 });
@@ -26,6 +27,7 @@ export const peerPool = peerDatabaseConfigured
       database: env.PEER_POSTGRES_DB,
       user: env.PEER_POSTGRES_USER,
       password: env.PEER_POSTGRES_PASSWORD,
+      options: env.PEER_POSTGRES_DB ? `-c search_path=${env.POSTGRES_SCHEMA},public` : undefined,
       max: 5,
       idleTimeoutMillis: 30_000
     })

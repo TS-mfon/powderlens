@@ -43,6 +43,7 @@ const asyncRoute =
 const applyDatabaseBootstrap = async () => {
   const schemaSql = await readFile(new URL("../db/schema.sql", import.meta.url), "utf8");
   const seedSql = await readFile(new URL("../db/seed.sql", import.meta.url), "utf8");
+  await pool.query(`create schema if not exists ${env.POSTGRES_SCHEMA}`);
   await pool.query(schemaSql);
   await pool.query(seedSql);
 };
@@ -97,7 +98,7 @@ app.get("/signals/:id", asyncRoute(async (req, res) => {
 }));
 
 app.get("/signals/:id/prediction", asyncRoute(async (req, res) => {
-  const prediction = await getSignalPrediction(env.POSTGRES_DB, String(req.params.id));
+  const prediction = await getSignalPrediction(`${env.POSTGRES_DB}_${env.POSTGRES_SCHEMA}`, String(req.params.id));
   if (!prediction) {
     res.status(404).json({ message: "Signal prediction not found" });
     return;
@@ -132,11 +133,11 @@ app.get("/protocols/:slug", asyncRoute(async (req, res) => {
 }));
 
 app.get("/ai-decisions", asyncRoute(async (_req, res) => {
-  res.json(await getAiDecisions(env.POSTGRES_DB));
+  res.json(await getAiDecisions(`${env.POSTGRES_DB}_${env.POSTGRES_SCHEMA}`));
 }));
 
 app.get("/ai-decisions/:id", asyncRoute(async (req, res) => {
-  const decision = await getAiDecisionById(env.POSTGRES_DB, String(req.params.id));
+  const decision = await getAiDecisionById(`${env.POSTGRES_DB}_${env.POSTGRES_SCHEMA}`, String(req.params.id));
   if (!decision) {
     res.status(404).json({ message: "AI decision not found" });
     return;
@@ -160,7 +161,7 @@ app.post("/ai-decisions/:id/feedback", asyncRoute(async (req, res) => {
     return;
   }
 
-  const decision = await getAiDecisionById(env.POSTGRES_DB, String(req.params.id));
+  const decision = await getAiDecisionById(`${env.POSTGRES_DB}_${env.POSTGRES_SCHEMA}`, String(req.params.id));
   if (!decision) {
     res.status(404).json({ message: "AI decision not found" });
     return;

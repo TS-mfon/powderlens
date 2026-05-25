@@ -8,6 +8,7 @@ const envSchema = z.object({
   POSTGRES_DB: z.string().default("powderlens"),
   POSTGRES_USER: z.string().default("powderlens"),
   POSTGRES_PASSWORD: z.string().default("change-me"),
+  POSTGRES_SCHEMA: z.string().regex(/^[a-zA-Z_][a-zA-Z0-9_]*$/).default("public"),
   PEER_POSTGRES_HOST: z.string().optional(),
   PEER_POSTGRES_PORT: z.coerce.number().optional(),
   PEER_POSTGRES_DB: z.string().optional(),
