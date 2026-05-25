@@ -178,6 +178,27 @@ app.post("/ai-decisions/:id/feedback", asyncRoute(async (req, res) => {
   });
 }));
 
+app.post("/ai-feedback", asyncRoute(async (req, res) => {
+  const parsed = aiFeedbackSchema.extend({ signalId: z.string().uuid() }).safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      message: "Invalid AI feedback payload",
+      issues: parsed.error.issues
+    });
+    return;
+  }
+
+  const created = await createAiFeedback(parsed.data.signalId, parsed.data.verdict, parsed.data.note);
+  res.status(201).json({
+    id: created.id,
+    signalId: created.signal_id,
+    verdict: created.verdict,
+    note: created.note,
+    createdAt: created.created_at,
+    replication: created.replication
+  });
+}));
+
 app.get("/replication-events", asyncRoute(async (_req, res) => {
   res.json(await getReplicationQueue());
 }));

@@ -168,7 +168,8 @@ export function DashboardPage({
       const response = await postJson<{
         verdict: "accepted" | "rejected";
         replication?: { status: string; error?: string };
-      }>(`/ai-decisions/${decision.id}/feedback`, {
+      }>("/ai-feedback", {
+        signalId: decision.signalId,
         verdict,
         note:
           verdict === "accepted"
